@@ -1,9 +1,10 @@
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
 import { generateVerificationToken } from "../utils/generateVerificationToken.js";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import { generateResetToken } from "../utils/generateResetToken.js";
-import { sendWelcomeEmail, sendVerificationEmail, sendResetPasswordEmail } from "../mailtrap/emails.js";
+import { sendWelcomeEmail, sendVerificationEmail, sendResetPasswordEmail, sendResetPasswordSuccessEmail } from "../mailtrap/emails.js";
 
 export const signup = async (req, res) => {
     const { name, email, password } = req.body;
@@ -91,15 +92,52 @@ export const forgotPassword = async (req, res) => {
         if (!user) throw new Error("invalid email");
         //generating reset token
         const resetToken = generateResetToken();
-        user.resetPasswordToken = await bcrypt.hash(resetToken, 10);
+        user.resetPasswordToken = createHash('sha256').update(resetToken).digest('hex');
         user.resetPasswordExpiresAt = Date.now() + 60 * 60 * 1000; //1 hour validity 
         await user.save();
         await sendResetPasswordEmail(email, resetToken);
-        res.status(200).json({ success: true, message: "password reset link sent successfully." });
+        res.status(200).json({
+            success: true, message: "password reset link sent successfully.", user: {
+                ...user._doc, password: undefined
+            }
+        });
 
 
     } catch (error) {
         res.status(401).json({ success: false, message: error.message });
+    }
+
+}
+
+export const resetPassword = async (req, res) => {
+    const { password, token } = req.body;
+    try {
+        const hashedToken = createHash('sha256').update(token).digest('hex');
+        const user = await User.findOne({ resetPasswordToken: hashedToken, resetPasswordExpiresAt: { $gt: Date.now() } });
+        if (!user) return res.status(401).json({ success: false, message: "Invalid or expired reset token" });
+        const hashedPassword = await bcrypt.hash(password, 10);
+        user.password = hashedPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpiresAt = undefined;
+        await user.save();
+        await sendResetPasswordSuccessEmail(user.email);
+        res.status(200).json({ success: true, message: "password reset successully" });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+}
+
+
+export const checkAuth = async (req, res) => {
+    try {
+        const user = await User.findById(req.userId).select("-password");
+        if (!user) return res.status(400).json({ success: false, message: "user not found" });
+
+        res.status(200).json({ success: true, user });
+
+    } catch (error) {
+        console.log('error in auth check');
+        res.status(400).json({ success: false, message: error.message });
     }
 
 }
