@@ -8,7 +8,12 @@ import { authContext } from "../context/authContext";
 const SignUpPage = () => {
   const [user, setUser] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState({ username: false, email: false });
-  const { signup, isLoading, error: isError } = useContext(authContext);
+  const {
+    signup,
+    isLoading,
+    error: isError,
+    checkAuth,
+  } = useContext(authContext);
   const navigate = useNavigate();
   const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -19,6 +24,7 @@ const SignUpPage = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    setError({ username: false, email: false });
     const { name, email, password } = user;
     const error = {
       username: !(name.length > 6),
@@ -30,6 +36,7 @@ const SignUpPage = () => {
     if (error.username || error.email || error.password) return setError(error);
     try {
       await signup(user);
+      await checkAuth();
       navigate("/verify-email");
     } catch (error) {
       console.log(error);
@@ -95,12 +102,9 @@ const SignUpPage = () => {
             className="bg-zinc-950 text-white p-4 w-full rounded-2xl text-base cursor-pointer 
           disabled:opacity-75"
           >
-            {isLoading ? (
-              <Loader className="mx-auto animate-spin" />
-            ) : (
-              "Sign up"
-            )}
+            {isLoading ? <Loader className="mx-auto animate-spin" /> : "Signup"}
           </button>
+          {isError && <p className="text-red-400 italic">* {isError}</p>}
         </div>
       </form>
 

@@ -1,8 +1,13 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { Loader } from "lucide-react";
+import { authContext } from "../context/authContext";
 
 const VerifyEmailPage = () => {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const inputRef = useRef([]);
+  const { verifyEmail, isLoading, error, checkAuth } = useContext(authContext);
+  const navigate = useNavigate();
 
   //autosubmit when user has filled all input fields
   useEffect(() => {
@@ -10,9 +15,16 @@ const VerifyEmailPage = () => {
       handleSubmit(new Event("submit"));
   }, code);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const verificationCode = code.join("");
+    try {
+      await verifyEmail(verificationCode);
+      await checkAuth();
+      navigate("/");
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const handleChange = (index, value) => {
@@ -70,12 +82,20 @@ const VerifyEmailPage = () => {
           ))}
         </div>
         <div className="mt-4">
-          <input
+          <button
             type="submit"
-            value="Verify Your Email"
-            className="bg-zinc-900 text-white p-4 w-full rounded-2xl text-base cursor-pointer hover:bg-zinc-950 transition-colors
-              duration-300"
-          />
+            className="bg-zinc-900 text-white p-4 w-full 
+            rounded-2xl text-base cursor-pointer hover:bg-zinc-950 transition-colors
+             duration-300"
+            disabled={true}
+          >
+            {isLoading ? (
+              <Loader className="mx-auto animate-spin" />
+            ) : (
+              "Verify Your Email"
+            )}
+          </button>
+          {error && <p className="text-red-400 mt-2">{error}</p>}
         </div>
       </form>
     </div>

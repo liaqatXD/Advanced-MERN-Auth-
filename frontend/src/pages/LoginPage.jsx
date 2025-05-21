@@ -1,15 +1,27 @@
-import { Mail, Lock } from "lucide-react";
+import { useContext } from "react";
+import { Mail, Lock, Loader } from "lucide-react";
+import { authContext } from "../context/authContext";
 import Input from "../components/Input";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 const LoginPage = () => {
+  const { login, isLoading, checkAuth } = useContext(authContext);
   const [user, setUser] = useState({ email: "", password: "" });
-  const [error, setError] = useState(false);
-  const handleLogin = (e) => {
+  const [error, setError] = useState("");
+
+  const handleLogin = async (e) => {
+    setError("");
     e.preventDefault();
     const { email, password } = user;
-    if (!email || !password) return setError(true);
+    if (!email || !password) return setError("Both fields are mandatory");
+    try {
+      await login(user.email, user.password);
+      checkAuth();
+    } catch (error) {
+      setError(error.response.data.message);
+    }
   };
+
   const handleUser = (key) => (e) =>
     setUser({ ...user, [key]: e.target.value });
   return (
@@ -56,17 +68,16 @@ const LoginPage = () => {
         </Link>
         <input type="submit" value="" />
         {error && (
-          <p className="text-red-400 text-center italic -mt-2">
-            * Both fields are mandatory
-          </p>
+          <p className="text-red-400 text-center italic -mt-2">* {error}</p>
         )}
         <div className="my-4">
-          <input
+          <button
             type="submit"
-            value="Login"
             className="bg-zinc-900 text-white p-4 w-full rounded-2xl text-base cursor-pointer hover:bg-zinc-950 transition-colors 
             duration-300"
-          />
+          >
+            {isLoading ? <Loader className="mx-auto animate-spin" /> : "Login"}
+          </button>
         </div>
       </form>
       <div className="bg-zinc-700 rounded-b-2xl p-4 text-white text-center">

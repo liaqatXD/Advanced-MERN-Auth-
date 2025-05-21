@@ -96,6 +96,7 @@ export const login = async (req, res) => {
 };
 
 export const logout = (req, res) => {
+  console.log('logged out')
   res.clearCookie("token");
   res
     .status(200)
@@ -130,7 +131,6 @@ export const forgotPassword = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   const {token}=req.params;
-  console.log(token);
   const { password } = req.body;
   try {
     const hashedToken = createHash("sha256").update(token).digest("hex");
